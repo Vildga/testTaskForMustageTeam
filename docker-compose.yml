@@ -1,0 +1,43 @@
+version: '3.7'
+
+services:
+  db:
+    image: postgres:15
+    container_name: expenses_postgres
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: expenses_db
+    ports:
+      - "15432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  expenses_api:
+    build: ./backend
+    container_name: expenses_api
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql+psycopg2://myuser:mypassword@db:5432/expenses_db
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+    command: [ "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000" ]
+
+
+  bot:
+    build: ./bot
+    container_name: expenses_bot
+    depends_on:
+      - expenses_api
+    environment:
+      API_BASE_URL: http://expenses_api:8000
+      BOT_TOKEN: "7939781719:AAGyDrNglHxIQH0n-nP9hA9NLfKKbuyc98w"
+    volumes:
+      - ./bot:/app
+    command: ["python", "bot.py"]
+
+volumes:
+  db_data:
